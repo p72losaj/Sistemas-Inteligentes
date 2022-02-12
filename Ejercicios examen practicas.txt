@@ -1,0 +1,226 @@
+EJERCICIO 1 - Funciona
+
+(deftemplate calificaciones 
+	(slot nombre (type STRING))
+	(slot curso (type STRING))
+	(slot asignatura)
+	(multislot notas_opcionales (type INTEGER))
+	(multislot notas_finales (type INTEGER)(default 0))
+)
+
+(deffacts hechos
+	(calificaciones (nombre "Garcia,Carlos")(curso "20/21")(asignatura SIN)(notas_opcionales 4 5 8 9)(notas_finales))
+	(calificaciones (nombre "Lorenzo,Jaime")(curso "20/21")(asignatura PAS)(notas_opcionales 1 2 3 4)(notas_finales))
+)
+
+Explicacion:
+
+Dados los hechos indicados, creamos la plantilla correspondiente a dichos hechos, asignando las restricciones necesarias a los campos y multicampos
+
+EJERCICIO 2 - funciona
+
+(defrule copiar_notas
+	?f <- (calificaciones (nombre $?)(curso $?)(asignatura $?)(notas_opcionales $?antes $?despues)(notas_finales))
+	=>
+	(modify ?f (notas_finales $?antes $?despues))
+)
+
+Explicacion:
+
+Copiamos el multicampo notas_opcionales en el multicampo notas_finales
+
+EJERCICIO 3 - Funciona
+
+(defrule ultima_nota
+	(calificaciones (nombre ?n)(curso ?c)(asignatura ?a)(notas_opcionales $?)(notas_finales $? ?x))
+	=>
+	(assert ultima_nota ?n ?c ?a ?x)
+)
+
+Explicacion:
+
+Mediante la regla ultima_nota, buscamos la ultima nota final y creamos hechos que indiquen dicha nota
+
+EJERCICIO 4 - Funciona
+
+(assert (nueva_nota 2))
+
+(defrule addNota
+	?f1 <- (nueva_nota ?x)
+	?f <- (calificaciones (nombre $?)(curso $?)(asignatura $?)(notas_opcionales $?antes $?despues)(notas_finales $?))
+	=>
+	(modify ?f (notas_opcionales $?antes ?x $?despues))
+	(retract ?f1)
+)
+
+Explicacion:
+
+Dado el hecho nueva_nota, concatenamos dicho hecho con el multicampo notas_opcionales del alumno "Lorenzo,Jaime"
+
+EJERCICIO 5 - Funciona
+
+Explicación:
+
+Cambia el estado del alumno a aprobado si está aprobado, o suspenso si está suspenso
+
+(deftemplate calificaciones 
+	(slot nombre (type STRING))
+	(slot curso (type STRING))
+	(slot asignatura)
+	(multislot notas_opcionales (type INTEGER))
+	(multislot notas_finales (type INTEGER)(default 0))
+	(slot estado (default pendiente))
+)
+
+(defrule copiar_notas
+	?f <- (calificaciones (nombre "Lorenzo,Jaime")(curso $?)(asignatura $?)(notas_opcionales $?antes $?despues)(notas_finales))
+	=>
+	(modify ?f (notas_finales $?antes $?despues))
+)
+
+(defrule suspenso
+	?f <- (calificaciones (nombre ?n)(curso $?)(asignatura $?)(notas_opcionales $?)(notas_finales ?x1 ?x2 ?x3 ?x4 )(estado pendiente))
+	(test (< ( / (+ ?x1 ?x2 ?x3 ?x4) 4) 5 ) )
+	=>
+	(modify ?f (estado suspenso))
+)
+
+(defrule aprobado
+	?f <- (calificaciones (nombre ?n)(curso $?)(asignatura $?)(notas_opcionales $?)(notas_finales ?x1 ?x2 ?x3 ?x4 )(estado pendiente))
+	(test (>= ( / (+ ?x1 ?x2 ?x3 ?x4) 4) 5 ) )
+	=>
+	(modify ?f (estado aprobado))
+)
+
+EJERCICIO 6 - Funciona
+
+Explicación: Indicar el nombre del alumno cuyas nota_finales sean par o impar
+
+(deffacts hechos
+	(calificaciones (nombre "Garcia,Carlos")(curso "20/21")(asignatura SIN)(notas_opcionales 4 5 8 9)(notas_finales))
+	(calificaciones (nombre "Lorenzo,Jaime")(curso "20/21")(asignatura PAS)(notas_opcionales 1 2 3 4)(notas_finales))
+	(calificaciones (nombre "Sanz,Jorge")(curso "19/20")(asignatura AL)(notas_opcionales 1 2 3 4 1)(notas_finales 1 2 3 4 1))
+	(assert 2)
+)
+
+(defrule nota_impar
+	(calificaciones (nombre ?n)(curso $?)(asignatura $?)(notas_opcionales $?)(notas_finales $?antes ?x $?despues)(estado $?))
+	(test (= (length$ $?antes)(length$ $?despues)))
+	=>
+	(printout t "El alumno " ?n " tiene un numero impar de notas_finales con la nota " ?x " en medio" crlf)
+)
+
+(defrule nota_par
+	(calificaciones (nombre ?n)(curso $?)(asignatura $?)(notas_opcionales $?)(notas_finales $?antes ?x ?y $?despues)(estado $?))
+	(test (= (length$ $?antes)(length$ $?despues)))
+	=>
+	(printout t "El alumno " ?n " tiene un numero par de notas_finales con la nota media " (/ (+ ?x ?y) 2) crlf)
+)
+
+EJERCICIO 7 - Funciona
+
+Explicacion:
+
+Indicar el alumno que presenta una mejora de notas_finales
+
+(defrule mejora_notas
+	(calificaciones (nombre ?n)(curso ?c)(asignatura ?a)(notas_opcionales $?)(notas_finales $?)(estado ?e))
+	(forall (calificaciones (nombre ?n)(curso ?c)(asignatura ?a)(notas_opcionales $?)(notas_finales $? ?x ?y $?)(estado ?e))
+		(test (<= ?x ?y)))
+	=>
+	(assert (mejora-notas ?n ?c ?a ?e))
+)
+
+EJERCICIO 8
+
+Explicación: 
+
+Crear la plantilla automovil con el monocampo matricula, con valor por defecto "sin asignar" y restringido a cadena, y el monocampo
+remolque, restringido a los valores si, no o preparado
+
+(deftemplate automovil (slot matricula (default "sin asignar")(type STRING))(slot remolque (allowed-values si no preparado)))
+
+(deffacts hechos 
+	(automovil (matricula "nissan")(remolque si))
+	(automovil (remolque no))(automovil (remolque preparado))
+)
+
+EJERCICIO 9 - Funciona
+
+Explicacion:
+
+Dados hechos (v1 <algo>) y (v2 <algo>), la regla imprima alguna combinación de valores DIFERENTES (y no más campos)
+
+(defrule valoresDiferentes
+	(v1 ?x)
+	(v2 ?y)
+	(not (test (eq ?x ?y)))
+	=>
+	(printout t ?x " " ?y crlf)
+)
+
+EJERCICIO 10 - Funciona
+
+Explicación:
+
+Encuentra hechos (valores ...) con 5 o más campos (contando valores), tal que el último sea leche y los 2 siguientes a valores sean 
+iguales
+
+
+(assert (valores juan jorge 4 leche))
+(assert (valores mama mama 10 sara))
+(assert (valores papa papa 1 leche))
+
+(defrule hechosLecheyOtros
+	(valores ?x ?x $? leche)
+	=>
+	(printout t "Existen hechos con leche y otros, y se repite " ?x crlf)
+)
+
+EJERCICIO 11 - Funciona
+
+Explicación:
+
+Dados los hechos (vector <nombre> <valores>), crea una regla que lanza un único mensaje por vector con valores repetidos
+
+(assert (vector v1 5 4 3 2 1))
+(assert (vector v2 4 3 4 2 1))
+(assert (vector v3 1 1 2 3 1))
+
+(defrule elementosRepetidos
+	(vector ?n $?)
+	(exists (vector ?n $? ?x $? ?x $?))
+	=>
+	(printout t "El vector " ?n " tiene elementos repetidos" crlf)
+)
+
+EJERCICIO 12 - Funciona
+
+Explicación:
+
+Diseña una regla que indique si los hechos (vector nombre valores) están ordenados
+
+(assert (vector v1 1 2 3 4 5 6 7))
+(assert (vector v2 2 3 4 1 5 6))
+
+(defrule elementosOrdenados
+	(vector ?n $?)
+	(forall (vector ?n $? ?x $? ?y $?)(test (<= ?x ?y)))
+	=>
+	(printout t "El vector " ?n " tiene sus elementos ordenados" crlf)
+)
+
+EJERCICIO 13 - Funciona
+
+Explicación:
+
+Diseña una regla que indique si un hecho (vector nombre valores) es subconjunto de otro. No puede ser que haya un elemento 
+en el segundo vector y no esté en el primero
+
+(defrule vectorSubconjunto
+	(vector ?x $?)
+	(vector ?y&~?x $?)
+	(not (and (vector ?y $? ?z $?) (not (vector ?x $? ?z $?))))
+	=>
+	(printout t "El vector " ?y " es un subconjunto del vector " ?x crlf)
+)
